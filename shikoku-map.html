@@ -1,0 +1,659 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<!doctype html>
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>四国 行きたいマップ</title>
+<style>
+:root {
+  --bg: #f6f2ea;
+  --surface: #ffffff;
+  --fg: #1e2b33;
+  --muted: #6b7780;
+  --line: #e2dcd0;
+  --land: #e7e1d3;
+  --sea: #dfe9ea;
+  --accent: #1f6f78;
+  --food: #b8742a;
+  --accent-soft: #dcecec;
+  --done: #8a8f94;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14201f;
+    --surface: #1c2b2a;
+    --fg: #e9efec;
+    --muted: #9fb0ab;
+    --line: #2e4140;
+    --land: #2a3d3b;
+    --sea: #101a19;
+    --accent: #6fc3c9;
+    --food: #e0a25c;
+    --accent-soft: #23403f;
+    --done: #6f7d79;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14201f;
+  --surface: #1c2b2a;
+  --fg: #e9efec;
+  --muted: #9fb0ab;
+  --line: #2e4140;
+  --land: #2a3d3b;
+  --sea: #101a19;
+  --accent: #6fc3c9;
+  --food: #e0a25c;
+  --accent-soft: #23403f;
+  --done: #6f7d79;
+  color-scheme: dark;
+}
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Noto Sans JP", "Hiragino Sans", "Yu Gothic", system-ui, sans-serif;
+  line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px 40px;
+}
+h1 {
+  font-family: "Shippori Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 1.5rem;
+  margin: 0 0 4px;
+  text-wrap: balance;
+}
+.lead { color: var(--muted); margin: 0 0 12px; font-size: 0.85rem; }
+/* Sticky band: opaque and full-bleed so list rows never show through its edges. */
+.stick {
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  z-index: 5;
+  background: var(--bg);
+  margin-left: calc(-1 * max(16px, env(safe-area-inset-left, 0px)));
+  margin-right: calc(-1 * max(16px, env(safe-area-inset-right, 0px)));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-bottom: 8px;
+}
+.mapbox {
+  background: var(--sea);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 6px;
+  overflow: hidden;
+}
+.mapbox svg { display: block; width: 100%; height: auto; max-height: 30vh; }
+.legend {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--muted);
+  margin: 4px 2px 0;
+}
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.pin { cursor: pointer; stroke: var(--surface); stroke-width: 1; }
+.pin.spot { fill: var(--accent); }
+.pin.food { fill: var(--food); }
+.pin.mixed { fill: var(--fg); }
+.pin.hot { stroke: var(--fg); }
+.halo { fill: none; stroke: var(--accent); pointer-events: none; }
+.ctext { fill: var(--surface); font-weight: 700; pointer-events: none; text-anchor: middle; }
+.bubble:focus-visible { outline: 2px solid var(--fg); }
+.land { fill: var(--land); stroke: var(--muted); stroke-width: 0.6; stroke-opacity: 0.6; }
+.pborder { fill: none; stroke: var(--muted); stroke-width: 0.9; stroke-dasharray: 3 2; stroke-opacity: 0.9; }
+.plabel { fill: var(--muted); font-size: 11px; letter-spacing: 0.1em; pointer-events: none; }
+.caption { font-size: 0.8rem; color: var(--fg); margin: 4px 2px 0; min-height: 1.2em; }
+.search {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 10px 12px;
+  font: inherit;
+  color: var(--fg);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin: 12px 0 10px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.tab {
+  font: inherit;
+  font-size: 0.85rem;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+}
+.tab[aria-selected="true"] {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+.tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.count { font-variant-numeric: tabular-nums; opacity: 0.8; margin-left: 4px; }
+.sum { font-size: 0.85rem; color: var(--muted); margin: 0 2px; }
+h2 {
+  font-size: 0.85rem;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin: 20px 0 8px;
+  font-weight: 700;
+}
+.list { list-style: none; padding: 0; margin: 0; display: grid; gap: 8px; }
+.item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px 12px;
+  min-width: 0;
+  cursor: pointer;
+}
+/* Selected row: thick accent border, tinted background, and a visible label. */
+.item.focus {
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+  padding: 9px 11px;
+}
+.fbadge {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--bg);
+  background: var(--accent);
+  border-radius: 4px;
+  padding: 0 6px;
+  margin-right: 6px;
+  vertical-align: 1px;
+}
+.item .body { min-width: 0; flex: 1; }
+.item .name { font-weight: 700; overflow-wrap: anywhere; }
+.item .pref { font-size: 0.75rem; color: var(--muted); margin-left: 6px; font-weight: 400; }
+.item .desc { font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
+.stamp {
+  flex: none;
+  font: inherit;
+  font-size: 0.8rem;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  background: var(--surface);
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.stamp[aria-pressed="true"] { background: var(--accent); color: var(--bg); }
+.stamp:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.empty { color: var(--muted); font-size: 0.9rem; padding: 8px 0; }
+.note { font-size: 0.75rem; color: var(--muted); margin: 6px 2px 0; }
+</style>
+
+<main>
+  <h1>四国 行きたいマップ</h1>
+  <p class="lead">地図の丸は近くの候補をまとめたものです。丸か候補をタップすると、地図と一覧で場所を確認できます。「行きたい」で印を付けられ、この端末では次回開いたときも残ります。</p>
+
+  <div class="stick">
+    <div class="mapbox">
+      <svg id="map" viewBox="0 0 320 272" role="img" aria-label="四国の簡易地図と行きたい場所">
+        <g id="land"></g>
+        <g id="borders"></g>
+        <g id="labels"></g>
+        <g id="pins"></g>
+      </svg>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--accent)"></i>観光地</span>
+        <span><i class="dot" style="background:var(--food)"></i>グルメ</span>
+        <span><i class="dot" style="background:var(--fg)"></i>両方</span>
+        <span>数字は件数／破線は県境（目安）</span>
+      </div>
+      <p class="caption" id="caption"></p>
+    </div>
+  </div>
+
+  <input class="search" id="q" type="search" placeholder="名前やエリアで絞り込む" aria-label="絞り込み">
+
+  <div class="row" role="tablist" id="tabs"></div>
+  <div class="row" role="group" aria-label="種類" id="types"></div>
+
+  <p class="sum" id="sum"></p>
+  <div id="out"></div>
+  <p class="note">地図は簡略化したもので、ピンの位置と県境はおおよその目安です。</p>
+</main>
+
+<script>
+const PREF = { all: "すべて", kagawa: "香川県", tokushima: "徳島県", kochi: "高知県", ehime: "愛媛県", stamp: "行きたい" };
+const TYPES = { all: "すべて", spot: "観光地", food: "ごはん" };
+
+const DATA = [
+  { p: "kagawa", t: "spot", n: "エンジェルロード", a: "小豆島", d: "潮の満ち引きで現れる砂の道。天使が願いを叶えてくれるとされる。", la: 34.47, lo: 134.25 },
+  { p: "kagawa", t: "spot", n: "小豆島のアート作品", a: "瀬戸内国際芸術祭", d: "「オリーブのリーゼント」など。", la: 34.49, lo: 134.2 },
+  { p: "kagawa", t: "spot", n: "高屋神社（天空の鳥居）", a: "観音寺市", d: "山頂の鳥居越しに街と海を一望できる。急な階段を上る。", la: 34.13, lo: 133.67 },
+  { p: "kagawa", t: "spot", n: "父母ヶ浜", a: "三豊市", d: "干潮時の夕暮れは鏡張りの写真が撮れる。", la: 34.2, lo: 133.6 },
+  { p: "kagawa", t: "spot", n: "金刀比羅宮（こんぴらさん）", a: "琴平町", d: "785段の石段。「こんぴら犬」のおみくじ。", la: 34.18, lo: 133.8 },
+  { p: "kagawa", t: "spot", n: "与島パーキングエリア", a: "瀬戸大橋", d: "橋の途中から瀬戸内海を眺められる。", la: 34.36, lo: 133.92 },
+  { p: "kagawa", t: "food", n: "うどん本人 山田家 本店", a: "高松市", d: "上天丼定食、ざるぶっかけ定食が人気。", la: 34.34, lo: 134.05 },
+  { p: "kagawa", t: "food", n: "須崎食料品店", a: "三豊市", d: "太めのコシ強麺に生卵、醤油、ちくわ天。", la: 34.17, lo: 133.65 },
+  { p: "kagawa", t: "food", n: "上戸うどん", a: "観音寺市", d: "海を眺めながら太めのかけうどん、イリコ天。", la: 34.12, lo: 133.68 },
+  { p: "kagawa", t: "food", n: "手打十段 うどんバカ一代", a: "高松市", d: "釜バターうどんが名物。", la: 34.35, lo: 134.04 },
+  { p: "kagawa", t: "food", n: "蒲生うどん", a: "坂出市", d: "行列の絶えない名店。", la: 34.31, lo: 133.85 },
+  { p: "kagawa", t: "food", n: "山越うどん", a: "綾川町", d: "かたまたまうどん、月見山うどん。", la: 34.25, lo: 133.96 },
+  { p: "kagawa", t: "food", n: "三島製麺所", a: "まんのう町", d: "山奥にある隠れ家的な人気店。", la: 34.17, lo: 133.82 },
+  { p: "kagawa", t: "food", n: "セルフうどん メン太郎", a: "丸亀市", d: "早朝から営業。かけ、ぶっかけがシンプルに味わえる。", la: 34.29, lo: 133.8 },
+  { p: "kagawa", t: "food", n: "手打ちうどん よしや", a: "丸亀市", d: "全工程手打ち。ぬるいうどん、豚肉うどんが特徴。", la: 34.28, lo: 133.79 },
+  { p: "kagawa", t: "food", n: "手打ちうどん むさし", a: "丸亀市", d: "唐揚げ、冷やしうどん、かまたまうどんなど。", la: 34.27, lo: 133.81 },
+  { p: "kagawa", t: "food", n: "手うちうどん うちや", a: "", d: "甘辛く煮た肉をお皿に盛り放題（肉ぶっかけ）。", la: 34.26, lo: 133.78 },
+  { p: "kagawa", t: "food", n: "本格手打うどん おか泉（かのか）", a: "宇多津町周辺", d: "冷やし天おろし、濃厚なイリコ出汁の生揚げうどん。", la: 34.28, lo: 133.88 },
+  { p: "kagawa", t: "food", n: "手打うどん 鶴丸", a: "高松市", d: "夜も営業。カレーうどん、すだちうどん。", la: 34.34, lo: 134.04 },
+  { p: "kagawa", t: "food", n: "うどん瀬戸晴れ", a: "高松市", d: "ぬるもちの食感と出汁のぶっかけうどん。", la: 34.33, lo: 134.05 },
+  { p: "kagawa", t: "food", n: "松下製麺所", a: "高松市", d: "うどんと中華麺を合わせたちゃんぽんが人気。", la: 34.34, lo: 134.06 },
+  { p: "kagawa", t: "food", n: "うどん高枝", a: "高松市", d: "肉うどん。出汁は背面のタンクから自分で注ぐ。", la: 34.335, lo: 134.055 },
+  { p: "kagawa", t: "food", n: "本格手打 かわたうどん", a: "", d: "合掌造りの店舗。釜揚げうどん、梅うどんなど。", la: 34.33, lo: 133.95 },
+  { p: "kagawa", t: "food", n: "讃岐うどんアイス", a: "道の駅など", d: "ミルク味にうどん出汁とうどん粒が入ったご当地アイス。", la: 34.33, lo: 134.0 },
+  { p: "kagawa", t: "food", n: "オリーブハマチの漬け丼", a: "積善など", d: "香川特産のオリーブハマチを使った漬け丼。", la: 34.33, lo: 133.85 },
+  { p: "kagawa", t: "food", n: "あんもち雑煮", a: "", d: "白味噌仕立てで、あんこ入りのお餅を入れる伝統の雑煮。", la: 34.34, lo: 134.02 },
+  { p: "kagawa", t: "food", n: "たこ判", a: "元祖たこ判 仁尾小前など", d: "大判焼きの型で焼いたご当地B級グルメ。", la: 34.13, lo: 133.72 },
+  { p: "kagawa", t: "food", n: "骨付鳥", a: "一鶴など", d: "スパイスの効いたジューシーな鶏。残ったタレにおにぎりをつけて食べる。", la: 34.33, lo: 134.03 },
+  { p: "kagawa", t: "food", n: "おびか", a: "坂出", d: "ご飯とうどんを出汁で炒め合わせた、家庭で親しまれる料理。", la: 34.32, lo: 133.86 },
+
+  { p: "tokushima", t: "spot", n: "祖谷のかずら橋", a: "三好市西祖谷山村", d: "シラクチカズラで編まれたスリル満点の吊り橋。大人550円。", la: 33.87, lo: 133.79 },
+  { p: "tokushima", t: "spot", n: "祖谷渓の小便小僧", a: "三好市", d: "断崖絶壁の上に立つ像。度胸試しがモチーフ。", la: 33.94, lo: 133.8 },
+  { p: "tokushima", t: "spot", n: "大歩危", a: "道の駅 大歩危 / 展望所", d: "吉野川沿いの断崖と、エメラルドグリーンの清流。", la: 33.85, lo: 133.67 },
+  { p: "tokushima", t: "spot", n: "大塚国際美術館", a: "鳴門市", d: "世界の名画1,087点を陶板で実物大再現。", la: 34.13, lo: 134.61 },
+  { p: "tokushima", t: "spot", n: "鳴門海峡の渦潮", a: "鳴門公園 / 大鳴門橋 / 渦潮観光船", d: "大鳴門橋から見下ろすか、観光船で間近に観賞。", la: 34.22, lo: 134.65 },
+  { p: "tokushima", t: "spot", n: "名頃 かかしの里", a: "三好市東祖谷", d: "住民が作ったリアルなカカシが集落のあちこちに。", la: 33.85, lo: 133.73 },
+  { p: "tokushima", t: "spot", n: "阿波踊り", a: "徳島市内", d: "徳島駅周辺などで開かれる伝統の踊り。", la: 34.07, lo: 134.56 },
+  { p: "tokushima", t: "food", n: "中華そば いのたに 鳴門店", a: "鳴門市", d: "濃厚な豚骨醤油スープ。甘辛い豚肉と生卵がよく合う。", la: 34.18, lo: 134.61 },
+  { p: "tokushima", t: "food", n: "徳島ラーメン店", a: "ラーメン東大 / 生卵無料発祥店など", d: "生卵とご飯のおかわりが無料。卵かけご飯にしてスープへ。", la: 34.07, lo: 134.55 },
+  { p: "tokushima", t: "food", n: "阿波おどりレストラン", a: "", d: "阿波尾鶏の親子丼。庭には小便タヌキ像も。", la: 34.065, lo: 134.565 },
+  { p: "tokushima", t: "food", n: "奥祖谷の秘境そば屋", a: "祖谷そばのお店", d: "太く短い祖谷そば。餅巾着や祖谷豆腐のおでん。", la: 33.83, lo: 133.76 },
+  { p: "tokushima", t: "food", n: "半田そうめん", a: "道の駅のお店", d: "普通の素麺より太めでモチモチした喉越し。", la: 33.9, lo: 134.24 },
+  { p: "tokushima", t: "food", n: "鳴門公園の売店", a: "鳴門市", d: "鳴門金時の金時芋ジェラート、フィッシュカツ。", la: 34.22, lo: 134.63 },
+  { p: "tokushima", t: "food", n: "でこまわし", a: "かずら橋前の売店", d: "柚子味噌や味噌だれを塗って焼いた焼き団子。", la: 33.865, lo: 133.785 },
+  { p: "tokushima", t: "food", n: "徳島バーガー", a: "", d: "鹿とイノシシの合挽きのジビエバーガー、レンコンバーガー。", la: 34.06, lo: 134.545 },
+  { p: "tokushima", t: "food", n: "びんびや", a: "鳴門の海鮮食堂", d: "マグロ、サーモン、イクラの三位一体丼。ゴマダレ海鮮丼も。", la: 34.2, lo: 134.62 },
+
+  { p: "kochi", t: "spot", n: "ひろめ市場", a: "高知市", d: "グルメ屋台村。地元の人にも観光客にも人気。", la: 33.56, lo: 133.53 },
+  { p: "kochi", t: "spot", n: "久礼大正町市場", a: "中土佐町久礼", d: "昭和レトロな鮮魚市場。捌きたてのカツオをその場で食べられる。", la: 33.48, lo: 133.12 },
+  { p: "kochi", t: "spot", n: "沢田マンション", a: "高知市", d: "「日本のサグラダ・ファミリア」と呼ばれる手作りマンション。", la: 33.555, lo: 133.535 },
+  { p: "kochi", t: "spot", n: "高知よさこい情報交流館", a: "高知市", d: "よさこい祭りの歴史を学び、鳴子を持って踊る体験ができる。", la: 33.56, lo: 133.52 },
+  { p: "kochi", t: "spot", n: "日高村 オムライス街道", a: "日高村", d: "特産のシュガートマトを使ったオムライスの店が並ぶ。", la: 33.54, lo: 133.61 },
+  { p: "kochi", t: "food", n: "カツオの塩たたき", a: "ひろめ市場（八広店・明神丸など）", d: "厚切りのカツオに粗塩と生ニンニクを添えて。", la: 33.56, lo: 133.53 },
+  { p: "kochi", t: "food", n: "カツオ刺身・タタキ", a: "久礼大正町市場（田中鮮魚店など）", d: "市場で選んだカツオを捌いてもらい、ご飯と味噌汁と一緒に。", la: 33.475, lo: 133.125 },
+  { p: "kochi", t: "food", n: "ウツボの南蛮漬け・から揚げ", a: "ひろめ市場など", d: "「海のギャング」ウツボをさっぱりと。", la: 33.565, lo: 133.53 },
+  { p: "kochi", t: "food", n: "橋本食堂 鍋焼きラーメン", a: "須崎市", d: "土鍋のラーメン。最後にご飯を入れて雑炊風に。", la: 33.4, lo: 133.28 },
+  { p: "kochi", t: "food", n: "村のオムライス", a: "村の駅 ひだか / レストラン サングリアなど", d: "トマトの旨味とバターが効いたふわとろのオムライス。", la: 33.535, lo: 133.605 },
+  { p: "kochi", t: "food", n: "四万十ポークグルメ", a: "ドライブイン インター", d: "四万十ポークのバーガー、肉まん、3種の豚丼。", la: 33.57, lo: 133.55 },
+  { p: "kochi", t: "food", n: "高知流チキン南蛮", a: "くいしんぼ如意など", d: "タルタルではなく特製オーロラソースをかけて食べる。", la: 33.55, lo: 133.54 },
+  { p: "kochi", t: "food", n: "玉子焼き飯", a: "らーめん ちょんまげ", d: "卵と米だけのシンプルな一品。食べ終えるとお皿に「ありがとう」の文字。", la: 33.56, lo: 133.525 },
+
+  { p: "ehime", t: "spot", n: "道後温泉", a: "松山市", d: "日本最古級の温泉。飛鳥の湯は浴衣と今治タオル付きの個室も。", la: 33.85, lo: 132.78 },
+  { p: "ehime", t: "spot", n: "道後商店街（道後ハイカラ通り）", a: "松山市", d: "からくり時計、足湯、今治タオル店などが並ぶ。", la: 33.85, lo: 132.79 },
+  { p: "ehime", t: "spot", n: "旧宇和町小学校 雑巾がけレース", a: "西予市宇和町", d: "109メートルの木造廊下で雑巾がけのタイムを競う。", la: 33.37, lo: 132.55 },
+  { p: "ehime", t: "spot", n: "しまなみ海道", a: "今治市〜尾道市", d: "瀬戸内海の橋をつなぐ絶景のドライブとサイクリング。", la: 34.2, lo: 133.0 },
+  { p: "ehime", t: "spot", n: "マイントピア別子", a: "新居浜市", d: "銅山遺産のテーマパーク。鉱山鉄道、トロッコ、砂金採り。", la: 33.96, lo: 133.52 },
+  { p: "ehime", t: "food", n: "道後の地ビール・おつまみ処", a: "麦酒館など", d: "坊っちゃんビール、マドンナビール、せんざんき。", la: 33.85, lo: 132.775 },
+  { p: "ehime", t: "food", n: "一六タルト・道後プリン", a: "一六本舗など", d: "一六タルト、坊っちゃん団子、みかんプリン。", la: 33.84, lo: 132.77 },
+  { p: "ehime", t: "food", n: "蛇口みかんジュース", a: "えひめ愛顔の観光物産館など", d: "蛇口をひねると濃厚な100%みかんジュース。", la: 33.84, lo: 132.765 },
+  { p: "ehime", t: "food", n: "じゃこ天", a: "魚のすり身天ぷら店", d: "愛媛名物のすり身揚げ。ピリ辛のイオガンツも。", la: 33.84, lo: 132.76 },
+  { p: "ehime", t: "food", n: "生口島のレモン料理", a: "れもん / 輪風など", d: "レモン鍋、タコ飯、レモンスカッシュ。", la: 34.29, lo: 133.07 },
+  { p: "ehime", t: "food", n: "伯方の塩ソフトクリーム", a: "道の駅 伯方S・Cパークなど", d: "ほんのり塩味がミルクの甘みを引き立てる。", la: 34.13, lo: 133.0 },
+  { p: "ehime", t: "food", n: "宇和島ちゃんぽん・大盛りカツカレー", a: "西予市宇和町の食堂", d: "あっさり魚出汁のご当地ちゃんぽん。", la: 33.365, lo: 132.545 },
+  { p: "ehime", t: "food", n: "そば吉", a: "", d: "愛媛県民に親しまれる地元の蕎麦チェーン。", la: 33.83, lo: 132.755 }
+];
+
+// Simplified outline of Shikoku [lon, lat]
+const OUTLINE = [
+  [132.0,33.35],[132.25,33.45],[132.42,33.45],[132.7,33.9],[133.0,34.05],
+  [133.28,34.2],[133.5,34.25],[133.85,34.32],[134.05,34.35],[134.6,34.22],
+  [134.75,34.12],[134.6,34.0],[134.72,33.85],[134.55,33.7],[134.4,33.6],
+  [134.25,33.5],[134.18,33.25],[133.9,33.45],[133.6,33.4],[133.5,33.55],
+  [133.3,33.35],[133.0,32.75],[132.85,32.95],[132.6,33.0],[132.56,33.22],[132.25,33.4]
+];
+
+// Approximate prefecture borders [lon, lat] polylines (rough)
+const BORDERS = [
+  [[133.5,34.25],[133.55,34.05],[133.62,33.85]],
+  [[134.3,34.22],[134.2,34.03],[134.0,33.95]],
+  [[133.62,33.85],[133.9,33.92],[134.0,33.95]],
+  [[132.9,33.1],[132.85,33.35],[133.0,33.55],[133.25,33.7],[133.62,33.85]],
+  [[133.62,33.85],[133.7,33.65],[133.95,33.6],[134.3,33.55]]
+];
+
+const FULL = { x: 0, y: 0, w: 320, h: 272 };
+function proj(lo, la) { return [(lo - 132) * 110 + 8, (34.6 - la) * 132 + 6]; }
+
+const SVGNS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("map");
+const bordersG = document.getElementById("borders");
+const landG = document.getElementById("land");
+const labelG = document.getElementById("labels");
+const pinG = document.getElementById("pins");
+const captionEl = document.getElementById("caption");
+
+(function drawStatic() {
+  const path = document.createElementNS(SVGNS, "path");
+  path.setAttribute("class", "land");
+  path.setAttribute("d", "M" + OUTLINE.map(([lo, la]) => proj(lo, la).map(v => v.toFixed(1)).join(" ")).join(" L") + " Z");
+  landG.appendChild(path);
+  const island = document.createElementNS(SVGNS, "ellipse");
+  const [ix, iy] = proj(134.25, 34.49);
+  island.setAttribute("cx", ix); island.setAttribute("cy", iy);
+  island.setAttribute("rx", 9); island.setAttribute("ry", 5);
+  island.setAttribute("class", "land");
+  landG.appendChild(island);
+
+  BORDERS.forEach(line => {
+    const p = document.createElementNS(SVGNS, "path");
+    p.setAttribute("class", "pborder");
+    p.setAttribute("d", "M" + line.map(([lo, la]) => proj(lo, la).map(v => v.toFixed(1)).join(" ")).join(" L"));
+    bordersG.appendChild(p);
+  });
+
+  [["香川", 34.22, 133.95], ["徳島", 33.95, 134.25], ["高知", 33.45, 133.45], ["愛媛", 33.6, 132.85]].forEach(([n, la, lo]) => {
+    const [x, y] = proj(lo, la);
+    const t = document.createElementNS(SVGNS, "text");
+    t.setAttribute("x", x); t.setAttribute("y", y);
+    t.setAttribute("text-anchor", "middle");
+    t.setAttribute("class", "plabel");
+    t.textContent = n;
+    labelG.appendChild(t);
+  });
+})();
+
+const STORE = "shikoku-stamps";
+let stamps = new Set();
+try { stamps = new Set(JSON.parse(localStorage.getItem(STORE) || "[]")); } catch (e) {}
+function saveStamps() { try { localStorage.setItem(STORE, JSON.stringify([...stamps])); } catch (e) {} }
+
+function key(item) { return item.p + ":" + item.t + ":" + item.n; }
+
+let current = "all";
+let typeFilter = "all";
+let lastItems = [];
+let focusSet = new Set();
+const tabsEl = document.getElementById("tabs");
+const typesEl = document.getElementById("types");
+const outEl = document.getElementById("out");
+const qEl = document.getElementById("q");
+const sumEl = document.getElementById("sum");
+
+function filtered() {
+  const q = qEl.value.trim();
+  return DATA.map((d, i) => ({ ...d, idx: i })).filter(d => {
+    if (current === "stamp" && !stamps.has(key(d))) return false;
+    if (current !== "all" && current !== "stamp" && d.p !== current) return false;
+    if (typeFilter !== "all" && d.t !== typeFilter) return false;
+    return !q || (d.n + d.a + d.d).includes(q);
+  });
+}
+
+function setView() {
+  let v = FULL;
+  if (current !== "all" && current !== "stamp") {
+    const pts = DATA.filter(d => d.p === current).map(d => proj(d.lo, d.la));
+    const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+    const pad = 22;
+    const x0 = Math.min(...xs) - pad, x1 = Math.max(...xs) + pad;
+    const y0 = Math.min(...ys) - pad, y1 = Math.max(...ys) + pad;
+    let w = Math.max(x1 - x0, 90), h = Math.max(y1 - y0, 90 * FULL.h / FULL.w);
+    if (w / h > FULL.w / FULL.h) { h = w * FULL.h / FULL.w; } else { w = h * FULL.w / FULL.h; }
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2;
+    v = { x: cx - w / 2, y: cy - h / 2, w, h };
+  }
+  svg.setAttribute("viewBox", [v.x, v.y, v.w, v.h].map(n => n.toFixed(2)).join(" "));
+}
+
+// Map units per screen pixel, so bubble size and grouping stay constant on screen.
+function unitsPerPx() {
+  const r = svg.getBoundingClientRect();
+  const vb = svg.viewBox.baseVal;
+  const s = Math.min(r.width / vb.width, r.height / vb.height);
+  return (s > 0 && isFinite(s)) ? 1 / s : vb.width / 300;
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  Object.keys(PREF).forEach(k => {
+    const count = k === "all" ? DATA.length
+      : k === "stamp" ? DATA.filter(d => stamps.has(key(d))).length
+      : DATA.filter(d => d.p === k).length;
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-selected", String(k === current));
+    b.textContent = PREF[k];
+    const c = document.createElement("span");
+    c.className = "count";
+    c.textContent = count;
+    b.appendChild(c);
+    b.addEventListener("click", () => { current = k; focusSet = new Set(); render(); });
+    tabsEl.appendChild(b);
+  });
+}
+
+function renderTypes() {
+  typesEl.innerHTML = "";
+  Object.keys(TYPES).forEach(k => {
+    const b = document.createElement("button");
+    b.className = "tab";
+    b.setAttribute("aria-pressed", String(k === typeFilter));
+    b.setAttribute("aria-selected", String(k === typeFilter));
+    b.textContent = TYPES[k];
+    b.addEventListener("click", () => { typeFilter = k; focusSet = new Set(); render(); });
+    typesEl.appendChild(b);
+  });
+}
+
+// Greedy grouping: every group's seed is at least `thr` away from every other seed.
+function clusterItems(items, thr) {
+  const used = new Array(items.length).fill(false);
+  const clusters = [];
+  items.forEach((it, i) => {
+    if (used[i]) return;
+    used[i] = true;
+    const p = proj(it.lo, it.la);
+    const members = [it];
+    items.forEach((jt, j) => {
+      if (used[j]) return;
+      const q = proj(jt.lo, jt.la);
+      if (Math.hypot(p[0] - q[0], p[1] - q[1]) < thr) { members.push(jt); used[j] = true; }
+    });
+    clusters.push({ x: p[0], y: p[1], members });
+  });
+  return clusters;
+}
+
+function typeClass(members) {
+  if (members.every(m => m.t === "spot")) return "spot";
+  if (members.every(m => m.t === "food")) return "food";
+  return "mixed";
+}
+
+function renderMap(items) {
+  pinG.innerHTML = "";
+  const k = unitsPerPx();
+  const R = 11 * k;
+  const thr = 26 * k;
+  clusterItems(items, thr).forEach(c => {
+    const g = document.createElementNS(SVGNS, "g");
+    g.setAttribute("class", "bubble");
+    g.setAttribute("tabindex", "0");
+    g.setAttribute("role", "button");
+    g.setAttribute("aria-label", c.members.map(m => m.n).join("、"));
+
+    const hot = c.members.some(m => focusSet.has(m.idx));
+
+    // Selected bubble gets an outer accent ring so it stands out from the rest.
+    if (hot) {
+      const halo = document.createElementNS(SVGNS, "circle");
+      halo.setAttribute("cx", c.x.toFixed(2));
+      halo.setAttribute("cy", c.y.toFixed(2));
+      halo.setAttribute("r", (R * 1.6).toFixed(2));
+      halo.setAttribute("class", "halo");
+      halo.setAttribute("style", "stroke-width:" + (2.5 * k).toFixed(2));
+      g.appendChild(halo);
+    }
+
+    const circ = document.createElementNS(SVGNS, "circle");
+    circ.setAttribute("cx", c.x.toFixed(2));
+    circ.setAttribute("cy", c.y.toFixed(2));
+    circ.setAttribute("r", R.toFixed(2));
+    circ.setAttribute("class", "pin " + typeClass(c.members) + (hot ? " hot" : ""));
+    circ.setAttribute("style", "stroke-width:" + ((hot ? 2.5 : 1) * k).toFixed(2));
+    g.appendChild(circ);
+
+    const t = document.createElementNS(SVGNS, "text");
+    t.setAttribute("x", c.x.toFixed(2));
+    t.setAttribute("y", (c.y + 3.6 * k).toFixed(2));
+    t.setAttribute("class", "ctext");
+    t.setAttribute("font-size", (11 * k).toFixed(2));
+    t.textContent = c.members.length;
+    g.appendChild(t);
+
+    const open = e => { e.stopPropagation(); focusFromCluster(c); };
+    g.addEventListener("click", open);
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); open(e); } });
+    pinG.appendChild(g);
+  });
+}
+
+function updateCaption() {
+  const names = lastItems.filter(d => focusSet.has(d.idx)).map(d => d.n);
+  captionEl.textContent = names.length ? "地図で選択中：" + names.join("、") : "";
+}
+
+function applyListFocus() {
+  outEl.querySelectorAll(".item").forEach(li => {
+    const on = focusSet.has(Number(li.dataset.idx));
+    li.classList.toggle("focus", on);
+    const name = li.querySelector(".name");
+    let badge = name && name.querySelector(".fbadge");
+    if (on && name && !badge) {
+      badge = document.createElement("span");
+      badge.className = "fbadge";
+      badge.textContent = "地図で表示中";
+      name.insertBefore(badge, name.firstChild);
+    } else if (!on && badge) {
+      badge.remove();
+    }
+  });
+}
+
+function clearFocus() {
+  focusSet = new Set();
+  renderMap(lastItems);
+  applyListFocus();
+  updateCaption();
+}
+
+function focusFromCluster(c) {
+  focusSet = new Set(c.members.map(m => m.idx));
+  renderMap(lastItems);
+  applyListFocus();
+  updateCaption();
+}
+
+function focusFromItem(idx) {
+  const cl = clusterItems(lastItems, 26 * unitsPerPx()).find(c => c.members.some(m => m.idx === idx));
+  focusSet = new Set(cl ? cl.members.map(m => m.idx) : [idx]);
+  renderMap(lastItems);
+  applyListFocus();
+  updateCaption();
+}
+
+svg.addEventListener("click", e => {
+  if (!e.target.closest(".bubble") && focusSet.size) clearFocus();
+});
+
+function updateSum() {
+  sumEl.textContent = "行きたいスタンプ：" + stamps.size + "件（この端末のブラウザに保存されます）";
+}
+
+function section(title, items) {
+  const h = document.createElement("h2");
+  h.textContent = title + "（" + items.length + "）";
+  outEl.appendChild(h);
+  if (!items.length) {
+    const e = document.createElement("p");
+    e.className = "empty";
+    e.textContent = current === "stamp" ? "行きたいスタンプはまだありません" : "該当なし";
+    outEl.appendChild(e);
+    return;
+  }
+  const ul = document.createElement("ul");
+  ul.className = "list";
+  items.forEach(item => {
+    const li = document.createElement("li");
+    const k = key(item);
+    li.className = "item";
+    li.dataset.idx = item.idx;
+    li.addEventListener("click", () => focusFromItem(item.idx));
+
+    const body = document.createElement("div");
+    body.className = "body";
+    const name = document.createElement("div");
+    name.className = "name";
+    name.textContent = item.n;
+    if (current === "all" || current === "stamp") {
+      const pr = document.createElement("span");
+      pr.className = "pref";
+      pr.textContent = PREF[item.p];
+      name.appendChild(pr);
+    }
+    const desc = document.createElement("div");
+    desc.className = "desc";
+    desc.textContent = (item.a ? item.a + "：" : "") + item.d;
+    body.appendChild(name);
+    body.appendChild(desc);
+
+    const sb = document.createElement("button");
+    sb.type = "button";
+    sb.className = "stamp";
+    const on = stamps.has(k);
+    sb.setAttribute("aria-pressed", String(on));
+    sb.textContent = on ? "取り消す" : "行きたい";
+    sb.addEventListener("click", e => {
+      e.stopPropagation();
+      if (stamps.has(k)) stamps.delete(k); else stamps.add(k);
+      saveStamps();
+      // In the 行きたい tab, cancelling removes the row, so redraw the page.
+      if (current === "stamp" && !stamps.has(k)) { render(); return; }
+      const now = stamps.has(k);
+      sb.setAttribute("aria-pressed", String(now));
+      sb.textContent = now ? "取り消す" : "行きたい";
+      renderTabs();
+      updateSum();
+    });
+
+    li.appendChild(body);
+    li.appendChild(sb);
+    ul.appendChild(li);
+  });
+  outEl.appendChild(ul);
+}
+
+function render() {
+  renderTabs();
+  renderTypes();
+  setView();
+  lastItems = filtered();
+  renderMap(lastItems);
+  outEl.innerHTML = "";
+  if (typeFilter !== "food") section("観光地・スポット", lastItems.filter(d => d.t === "spot"));
+  if (typeFilter !== "spot") section("ご飯屋さん・グルメ", lastItems.filter(d => d.t === "food"));
+  applyListFocus();
+  updateCaption();
+  updateSum();
+}
+
+qEl.addEventListener("input", () => { focusSet = new Set(); render(); });
+window.addEventListener("resize", () => { renderMap(lastItems); applyListFocus(); });
+render();
+</script>
+
+</body></html>
